@@ -20,6 +20,12 @@ profile.cov
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# Built tool binaries (extensionless build output living next to their
+# source, e.g. `go build -o tools/solistest/solistest ./tools/solistest`)
+tools/*/*
+!tools/*/*.go
+!tools/*/*.md
+
 # Go workspace file
 go.work
 go.work.sum
