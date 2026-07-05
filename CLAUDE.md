@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project purpose
 
-solis2mqtt reads data from a Solis hybrid inverter over RS485 Modbus RTU and (eventually) publishes it to an MQTT broker. The project is in an early stage: only a standalone Modbus connectivity-test CLI exists so far (`tools/solistest`). There is no MQTT client, no daemon/service entry point, and no configuration file format yet — don't assume these exist when navigating the code.
+solis2mqtt reads data from a Solis hybrid inverter and an ABB B23/B24 power meter, both over RS485 Modbus RTU, and (eventually) publishes it to an MQTT broker. The project is in an early stage: only standalone Modbus connectivity-test CLIs exist so far (`tools/solistest` for the inverter, `tools/b23test` for the meter). There is no MQTT client, no daemon/service entry point, and no configuration file format yet — don't assume these exist when navigating the code.
 
-The authoritative reference for register addresses, data types, scaling factors, and function codes is the vendor protocol document at `doc/RS485_MODBUS(ESINV-33000ID) Hybrid Inverter.pdf`. Any new register support should be cross-checked against it rather than guessed.
+The authoritative references for register addresses, data types, scaling factors, and function codes are the vendor protocol documents: `doc/RS485_MODBUS(ESINV-33000ID) Hybrid Inverter.pdf` for the Solis inverter, and `doc/B23_B24_User_Manual.pdf.pdf` (chapter 9, "Communication with Modbus") for the ABB meter. Any new register support should be cross-checked against the relevant document rather than guessed.
 
 ## Commands
 
@@ -16,19 +16,19 @@ Requires Go 1.23+ (see `go.mod`, module `solis2mqtt`). If `go` is not on PATH an
 go build ./...                                    # build everything
 go vet ./...                                      # static checks
 gofmt -l .                                        # formatting check (should print nothing)
-go test ./...                                      # run all tests
-go test ./tools/solistest -run TestName -v         # run a single test
-go run ./tools/solistest -device /dev/ttyS0        # run the connectivity CLI without a build step
+go test ./...                                      # run all tests (none currently exist; Modbus framing/serial I/O is delegated to grid-x/modbus)
+go run ./tools/solistest -device /dev/ttyS0        # run the inverter connectivity CLI without a build step
+go run ./tools/b23test -device /dev/ttyS0          # run the ABB meter connectivity CLI without a build step
 ```
-
-`tools/solistest` has zero external dependencies by design (stdlib only), so it builds without network access or `go mod download` — important since it's meant to run on the same embedded/RPi-class device connected to the inverter's RS485 port, which may be offline.
 
 ## Architecture
 
-- **`tools/solistest/modbus.go`** — pure Modbus RTU framing: CRC16/Modbus checksum, request builder, response parser/validator. No I/O. Tested in `modbus_test.go` against byte-for-byte request/response examples taken directly from the protocol PDF's worked examples (section 6.1), so these tests double as protocol conformance checks.
-- **`tools/solistest/serial.go`** — configures the serial fd for raw 9600/8N1 (the inverter's default RS485 parameters) via direct `termios` ioctl syscalls, deliberately avoiding `golang.org/x/sys/unix` to keep the tool dependency-free.
-- **`tools/solistest/main.go`** — CLI flags (`-device`, `-slave`, `-register`, `-timeout`) and orchestration: send request, read response, decode as U16.
+Both connectivity-test CLIs are single-file `main.go` programs built on [`github.com/grid-x/modbus`](https://github.com/grid-x/modbus) (a fork of the historically-standard `goburrow/modbus`, actively maintained and BSD-3-Clause licensed), which handles Modbus RTU framing (CRC16, request/response encode-decode, exception handling) and the underlying serial port (via its `github.com/grid-x/serial` dependency) internally. There is no hand-rolled framing or termios code in this repo anymore — don't reintroduce it; extend via the library's `Client`/`RTUClientHandler` API instead.
 
-Two non-obvious protocol/platform details future changes should preserve:
-1. **Register addressing has no offset.** The decimal register addresses in the PDF map directly to the raw big-endian address field on the wire (e.g. register 33001 → request bytes `80 E9`). Don't apply the usual Modbus `40001`-style offset conventions here.
-2. **Serial read timeout surfaces as `io.EOF`, not `(0, nil)`.** With `VMIN=0`/`VTIME>0` termios settings, a read that times out with no data returns 0 bytes at the syscall level, but Go's `os.File.Read` turns that specific case into `io.EOF`. Code that reads from the serial port must treat `io.EOF` as "no more data right now," not as a fatal/EOF-of-stream error.
+- **`tools/solistest/main.go`** — CLI flags (`-device`, `-slave`, `-register`, `-timeout`), configures a `modbus.NewRTUClientHandler` for 9600 8N1, and reads one input register (function code 0x04, default 35000 — the Solis inverter type identifier) via `client.ReadInputRegisters`.
+- **`tools/b23test/main.go`** — same structure, targeting the ABB B23/B24 power meter. Reads one holding register (function code 0x03, default 23340 / 0x5B2C — line frequency, 0.01 Hz/LSB) via `client.ReadHoldingRegisters`. The ABB meter's Modbus interface only supports function codes 3, 6, and 16 (no 0x04 Read Input Registers), unlike the Solis inverter.
+
+The two tools still don't share a package — each is a self-contained ~60-line `main.go` — but nothing prevents factoring out common handler setup into an internal package if a third tool or the eventual MQTT daemon needs it.
+
+One non-obvious protocol detail future changes should preserve:
+**Register addressing has no offset.** The decimal register addresses in the vendor PDFs map directly to the address passed to `ReadInputRegisters`/`ReadHoldingRegisters` (e.g. Solis register 33001 → address `33001`, wire bytes `80 E9`). Don't apply the usual Modbus `40001`-style offset conventions here. This holds for both the Solis and ABB register maps.

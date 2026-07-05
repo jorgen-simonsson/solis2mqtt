@@ -4,20 +4,21 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"time"
+
+	"github.com/grid-x/modbus"
 )
 
 func main() {
 	device := flag.String("device", "/dev/ttyS0", "serial device connected to the inverter's RS485 port")
 	slaveID := flag.Uint("slave", 1, "Modbus slave address")
 	register := flag.Uint("register", 35000, "input register address to read (function code 0x04)")
-	timeout := flag.Duration("timeout", 2*time.Second, "response read timeout")
+	timeout := flag.Duration("timeout", 2*time.Second, "maximum time to wait for a response")
 	flag.Parse()
 
 	if *slaveID == 0 || *slaveID > 255 {
@@ -29,44 +30,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	readTimeoutDeciseconds := timeout.Seconds() * 10
-	if readTimeoutDeciseconds < 1 {
-		readTimeoutDeciseconds = 1
-	}
-	if readTimeoutDeciseconds > 255 {
-		readTimeoutDeciseconds = 255
-	}
+	// 9600 8N1 is the Solis inverter's default RS485 electrical interface.
+	handler := modbus.NewRTUClientHandler(*device)
+	handler.BaudRate = 9600
+	handler.DataBits = 8
+	handler.Parity = "N"
+	handler.StopBits = 1
+	handler.SlaveID = byte(*slaveID)
+	handler.Timeout = *timeout
 
-	port, err := openSerialPort(*device, byte(readTimeoutDeciseconds))
-	if err != nil {
+	ctx := context.Background()
+	if err := handler.Connect(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	defer port.Close()
+	defer handler.Close()
 
-	const functionCode = 0x04 // Read Input Registers
-	request := buildReadRegistersRequest(functionCode, byte(*slaveID), uint16(*register), 1)
+	client := modbus.NewClient(handler)
 
-	fmt.Printf("TX: % X\n", request)
-
-	if _, err := port.Write(request); err != nil {
-		fmt.Fprintf(os.Stderr, "error: write failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	response, err := readResponse(port, *timeout)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("RX: % X\n", response)
-
-	if len(response) == 0 {
-		fmt.Fprintln(os.Stderr, "error: no response from inverter (timed out)")
-		os.Exit(1)
-	}
-
-	data, err := parseReadRegistersResponse(byte(*slaveID), functionCode, response)
+	data, err := client.ReadInputRegisters(ctx, uint16(*register), 1)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -74,31 +56,4 @@ func main() {
 
 	value := binary.BigEndian.Uint16(data)
 	fmt.Printf("Register %d (U16): %d (0x%04X)\n", *register, value, value)
-}
-
-// readResponse accumulates bytes from the serial port until no further
-// bytes arrive (VMIN=0 read timeout) or the overall deadline is reached.
-func readResponse(port *os.File, overallTimeout time.Duration) ([]byte, error) {
-	deadline := time.Now().Add(overallTimeout)
-	var response []byte
-	buf := make([]byte, 256)
-
-	for time.Now().Before(deadline) {
-		n, err := port.Read(buf)
-		if n == 0 {
-			// A VMIN=0/VTIME read that times out with no bytes available
-			// surfaces as io.EOF from os.File.Read; that just means the
-			// inverter hasn't sent (more) data yet, not end-of-file.
-			if err == nil || errors.Is(err, io.EOF) {
-				break
-			}
-			return response, fmt.Errorf("read failed: %w", err)
-		}
-		if err != nil && !errors.Is(err, io.EOF) {
-			return response, fmt.Errorf("read failed: %w", err)
-		}
-		response = append(response, buf[:n]...)
-	}
-
-	return response, nil
 }
