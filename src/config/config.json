@@ -1,0 +1,82 @@
+{
+    "timing":
+    {
+        "pollingInterval": 1000,
+        "interReadDelay": 50
+    },
+    "links":
+    [
+        {
+            "linkId": "link1",
+            "linkType": "modbusRTU",
+            "linkName": "/dev/ttyS0",
+            "baudrate": 9600,
+            "parity": "none",
+            "dataBits": 8,
+            "stopBits": 1
+        }
+    ],
+    "devices":
+    [
+        {
+            "linkId": "link1",
+            "deviceId": "ABB_B23",
+            "deviceAddress": 1,
+            "tableId": "ABB_B23_Registers",
+            "mqttTopic": "modbus/ABB_B23"
+        }
+    ],
+    "registerTables":
+    [
+        {
+            "tableId": "ABB_B23_Registers",
+            "registerClusters":
+            [
+                {
+                    "clusterName": "ABB_B23_Cluster_Voltage",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 23296,
+                            "modbusReadCommand": 3,
+                            "modbusSize": 2,
+                            "scaleFactor": 0.1,
+                            "dataType": "uint32",
+                            "outputProperty": "voltageL1"
+                        },
+                        {
+                            "registerAddress": 23298,
+                            "modbusReadCommand": 3,
+                            "modbusSize": 2,
+                            "scaleFactor": 0.1,
+                            "dataType": "uint32",
+                            "outputProperty": "voltageL2"
+                        }
+                    ]
+                },
+                {
+                    "clusterName": "ABB_B23_Cluster_Current",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 23308,
+                            "modbusReadCommand": 3,
+                            "modbusSize": 2,
+                            "scaleFactor": 0.01,
+                            "dataType": "uint32",
+                            "outputProperty": "currentL1"
+                        },
+                        {
+                            "registerAddress": 23310,
+                            "modbusReadCommand": 3,
+                            "modbusSize": 2,
+                            "scaleFactor": 0.01,
+                            "dataType": "uint32",
+                            "outputProperty": "currentL2"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

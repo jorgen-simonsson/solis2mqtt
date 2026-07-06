@@ -1,0 +1,13 @@
+services:
+  solis2mqtt:
+    build:
+      context: ..
+      dockerfile: src/Dockerfile
+    container_name: solis2mqtt
+    restart: unless-stopped
+    env_file:
+      - .env
+    devices:
+      - "/dev/ttyS0:/dev/ttyS0"
+    volumes:
+      - ./config:/app/config:ro
