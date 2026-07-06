@@ -50,8 +50,28 @@ func Span(cl config.RegisterCluster) (ClusterSpan, error) {
 	}, nil
 }
 
+// DefaultOutputDecimals is the number of decimal places a register's value
+// is rounded to before publishing when its RegisterDef doesn't set
+// OutputDecimals.
+const DefaultOutputDecimals = 2
+
+// OutputDecimals resolves the number of decimal places def's value should be
+// rounded and formatted to: def.OutputDecimals if set, DefaultOutputDecimals
+// otherwise.
+func OutputDecimals(def config.RegisterDef) int {
+	if def.OutputDecimals != nil {
+		return *def.OutputDecimals
+	}
+	return DefaultOutputDecimals
+}
+
 // Decode extracts def's value out of block, a register block that was read
-// starting at blockStart (as returned by Span), and applies def.ScaleFactor.
+// starting at blockStart (as returned by Span), applies def.ScaleFactor, and
+// rounds the result to OutputDecimals(def) decimal places. Note that the
+// returned float64 cannot itself carry trailing zeros (23.8 and 23.80 are
+// the same float64) — callers that need a fixed number of decimal places in
+// their output must format the value with that precision themselves, e.g.
+// via strconv.FormatFloat(v, 'f', OutputDecimals(def), 64).
 func Decode(block []byte, blockStart uint16, def config.RegisterDef) (float64, error) {
 	offset := int(def.RegisterAddress-blockStart) * 2
 	length := int(def.ModbusSize) * 2
@@ -65,18 +85,22 @@ func Decode(block []byte, blockStart uint16, def config.RegisterDef) (float64, e
 		factor = 1
 	}
 
+	var value float64
 	switch def.DataType {
 	case "uint16":
-		return float64(binary.BigEndian.Uint16(raw)) * factor, nil
+		value = float64(binary.BigEndian.Uint16(raw)) * factor
 	case "int16":
-		return float64(int16(binary.BigEndian.Uint16(raw))) * factor, nil
+		value = float64(int16(binary.BigEndian.Uint16(raw))) * factor
 	case "uint32":
-		return float64(binary.BigEndian.Uint32(raw)) * factor, nil
+		value = float64(binary.BigEndian.Uint32(raw)) * factor
 	case "int32":
-		return float64(int32(binary.BigEndian.Uint32(raw))) * factor, nil
+		value = float64(int32(binary.BigEndian.Uint32(raw))) * factor
 	case "float32":
-		return float64(math.Float32frombits(binary.BigEndian.Uint32(raw))) * factor, nil
+		value = float64(math.Float32frombits(binary.BigEndian.Uint32(raw))) * factor
 	default:
 		return 0, fmt.Errorf("register %d: unsupported dataType %q", def.RegisterAddress, def.DataType)
 	}
+
+	scale := math.Pow(10, float64(OutputDecimals(def)))
+	return math.Round(value*scale) / scale, nil
 }

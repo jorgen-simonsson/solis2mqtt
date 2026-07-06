@@ -128,6 +128,16 @@ func TestPoller_PollAll_Integration(t *testing.T) {
 
 	select {
 	case payload := <-received:
+		// Assert the exact bytes, not just the parsed numeric value: both
+		// registers default to 2 output decimals, and json.Unmarshal into a
+		// float64 can't distinguish "1234.00" from "1234" or "1234.0" (they're
+		// the same float64), which would hide a regression in the fixed
+		// decimal-place formatting.
+		wantJSON := `{"current":-0.50,"temp":1234.00}`
+		if string(payload) != wantJSON {
+			t.Errorf("payload = %s, want %s", payload, wantJSON)
+		}
+
 		var got map[string]float64
 		if err := json.Unmarshal(payload, &got); err != nil {
 			t.Fatalf("unmarshal payload %s: %v", payload, err)

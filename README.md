@@ -47,7 +47,7 @@ On startup, the daemon (`src/cmd/solis2mqtt`):
 2. Connects to the MQTT broker, with automatic retry/backoff if it isn't reachable yet.
 3. Builds one serial `Bus` per configured link. Connections to the serial port are opened lazily on first use, and any bus that errors on a read is closed and reconnected from scratch on the next attempt — a flaky or temporarily disconnected serial adapter doesn't require restarting the daemon.
 4. Repeatedly, forever (until SIGINT/SIGTERM):
-   - For every configured device, read each of its register clusters with a single Modbus request per cluster (function code 3 or 4), decode every register in the cluster according to its data type and scale factor, and merge the results into one JSON object keyed by `outputProperty`.
+   - For every configured device, read each of its register clusters with a single Modbus request per cluster (function code 3 or 4), decode every register in the cluster according to its data type and scale factor, round it to its `outputDecimals` (default 2), and merge the results into one JSON object keyed by `outputProperty`.
    - Publish that JSON object (QoS 1, retained) to the device's configured MQTT topic.
    - A failed cluster read, decode error, or publish error is logged and skipped — it does not crash the daemon or stop the rest of the round.
    - Wait the configured `pollingInterval` and start the next round.
@@ -65,7 +65,7 @@ See `doc/config_template.json` for a complete annotated example. The top-level s
 | `timing` | `pollingInterval` (ms) — delay between polling rounds. `interReadDelay` (ms) — delay between cluster reads within a device. |
 | `links` | Serial ports. Each has a `linkId`, `linkType` (only `"modbusRTU"` today), `linkName` (device path, e.g. `/dev/ttyS0`), `baudrate`, `parity` (`none`/`even`/`odd`), `dataBits`, `stopBits`. |
 | `devices` | One entry per physical device: which `linkId` it's on, its Modbus slave `deviceAddress` (1–255), which `tableId` describes its registers, and the `mqttTopic` to publish to. |
-| `registerTables` | Named tables of `registerClusters`, each a list of register definitions: `registerAddress`, `modbusReadCommand` (3 = holding, 4 = input registers), `modbusSize` (number of 16-bit words), `dataType` (`uint16`, `int16`, `uint32`, `int32`, `float32`), `scaleFactor` (0 is treated as 1), and `outputProperty` (the JSON key the decoded value is published under). |
+| `registerTables` | Named tables of `registerClusters`, each a list of register definitions: `registerAddress`, `modbusReadCommand` (3 = holding, 4 = input registers), `modbusSize` (number of 16-bit words), `dataType` (`uint16`, `int16`, `uint32`, `int32`, `float32`), `scaleFactor` (0 is treated as 1), `outputProperty` (the JSON key the decoded value is published under), and optional `outputDecimals` (decimal places to round the published value to; defaults to 2 if omitted). |
 
 Validation performed at load time (the process refuses to start if any of these fail):
 
@@ -73,6 +73,7 @@ Validation performed at load time (the process refuses to start if any of these 
 - Every device references a `linkId` and `tableId` that actually exist.
 - Every register's `modbusSize` matches what its `dataType` requires, and `modbusReadCommand` is 3 or 4.
 - Within a single cluster, every register shares the same `modbusReadCommand`, and — sorted by address — the registers form a gap-free, non-overlapping, ascending block. A cluster is read as one contiguous Modbus request spanning its lowest to highest address, so a "cluster" with gaps, overlaps, or mixed function codes isn't a config the daemon can actually service.
+- `outputDecimals`, if set, must be >= 0.
 
 ### Environment variables
 

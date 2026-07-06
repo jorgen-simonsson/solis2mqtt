@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"solis2mqtt/src/internal/config"
@@ -68,7 +69,11 @@ func (p *Poller) pollDevice(ctx context.Context, dev config.Device) error {
 	}
 
 	interReadDelay := time.Duration(p.cfg.Timing.InterReadDelayMS) * time.Millisecond
-	payload := make(map[string]float64)
+	// json.RawMessage rather than float64: encoding/json always prints
+	// floats with the shortest representation that round-trips (23.8, never
+	// 23.80), so a fixed number of decimal places has to be formatted as a
+	// string and inserted verbatim as the raw number token.
+	payload := make(map[string]json.RawMessage)
 
 	for i, cl := range table.RegisterClusters {
 		if ctx.Err() != nil {
@@ -93,7 +98,8 @@ func (p *Poller) pollDevice(ctx context.Context, dev config.Device) error {
 				log.Printf("device %s: cluster %s: %v", dev.DeviceID, cl.ClusterName, err)
 				continue
 			}
-			payload[r.OutputProperty] = v
+			formatted := strconv.FormatFloat(v, 'f', registers.OutputDecimals(r), 64)
+			payload[r.OutputProperty] = json.RawMessage(formatted)
 		}
 
 		if i < len(table.RegisterClusters)-1 && interReadDelay > 0 {

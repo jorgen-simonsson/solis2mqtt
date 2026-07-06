@@ -63,6 +63,11 @@ type RegisterDef struct {
 	ScaleFactor       float64 `json:"scaleFactor"`
 	DataType          string  `json:"dataType"` // uint16, int16, uint32, int32, float32
 	OutputProperty    string  `json:"outputProperty"`
+	// OutputDecimals overrides the number of decimal places the published
+	// value is rounded to (registers.DefaultOutputDecimals if nil). A
+	// pointer so an explicit 0 (round to a whole number) is distinguishable
+	// from "not set".
+	OutputDecimals *int `json:"outputDecimals,omitempty"`
 }
 
 // dataTypeSizes maps each supported dataType to the number of 16-bit
@@ -147,6 +152,9 @@ func (c *Config) validate() error {
 				}
 				if r.ModbusSize != wantSize {
 					return fmt.Errorf("table %s: cluster %s: register %d: dataType %q requires modbusSize %d, got %d", t.TableID, cl.ClusterName, r.RegisterAddress, r.DataType, wantSize, r.ModbusSize)
+				}
+				if r.OutputDecimals != nil && *r.OutputDecimals < 0 {
+					return fmt.Errorf("table %s: cluster %s: register %d: outputDecimals must be >= 0", t.TableID, cl.ClusterName, r.RegisterAddress)
 				}
 			}
 			if err := validateClusterLayout(t.TableID, cl); err != nil {

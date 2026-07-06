@@ -42,7 +42,7 @@
                             "modbusSize": 2,
                             "scaleFactor": 0.1,
                             "dataType": "uint32",
-                            "outputProperty": "voltageL1"
+                            "outputProperty": "voltage.L1"
                         },
                         {
                             "registerAddress": 23298,
@@ -50,7 +50,7 @@
                             "modbusSize": 2,
                             "scaleFactor": 0.1,
                             "dataType": "uint32",
-                            "outputProperty": "voltageL2"
+                            "outputProperty": "voltage.L2"
                         }
                     ]
                 },
@@ -64,7 +64,7 @@
                             "modbusSize": 2,
                             "scaleFactor": 0.01,
                             "dataType": "uint32",
-                            "outputProperty": "currentL1"
+                            "outputProperty": "current.L1"
                         },
                         {
                             "registerAddress": 23310,
@@ -72,7 +72,7 @@
                             "modbusSize": 2,
                             "scaleFactor": 0.01,
                             "dataType": "uint32",
-                            "outputProperty": "currentL2"
+                            "outputProperty": "current.L2"
                         }
                     ]
                 }

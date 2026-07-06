@@ -25,7 +25,7 @@ const validConfigJSON = `{
       "clusterName": "cluster1",
       "registers": [
         {"registerAddress":100,"modbusReadCommand":3,"modbusSize":1,"scaleFactor":1,"dataType":"uint16","outputProperty":"temp"},
-        {"registerAddress":101,"modbusReadCommand":3,"modbusSize":2,"scaleFactor":0.1,"dataType":"float32","outputProperty":"voltage"}
+        {"registerAddress":101,"modbusReadCommand":3,"modbusSize":2,"scaleFactor":0.1,"dataType":"float32","outputProperty":"voltage","outputDecimals":3}
       ]
     }]
   }]
@@ -53,6 +53,10 @@ func TestLoad_Valid(t *testing.T) {
 	}
 	if len(table.RegisterClusters) != 1 || len(table.RegisterClusters[0].Registers) != 2 {
 		t.Fatalf("unexpected table shape: %+v", table)
+	}
+	voltage := table.RegisterClusters[0].Registers[1]
+	if voltage.OutputDecimals == nil || *voltage.OutputDecimals != 3 {
+		t.Errorf("voltage.OutputDecimals = %v, want 3", voltage.OutputDecimals)
 	}
 
 	link, ok := cfg.LinkByID("link1")
@@ -162,6 +166,10 @@ func TestValidate_Errors(t *testing.T) {
 		{"cluster mixes modbus read commands", func(c *Config) {
 			regs := &c.RegisterTables[0].RegisterClusters[0].Registers
 			*regs = append(*regs, RegisterDef{RegisterAddress: 101, ModbusReadCommand: 4, ModbusSize: 1, DataType: "uint16", OutputProperty: "other"})
+		}},
+		{"negative output decimals", func(c *Config) {
+			negOne := -1
+			c.RegisterTables[0].RegisterClusters[0].Registers[0].OutputDecimals = &negOne
 		}},
 	}
 

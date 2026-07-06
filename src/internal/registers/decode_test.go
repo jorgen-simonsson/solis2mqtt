@@ -149,4 +149,39 @@ func TestDecode(t *testing.T) {
 			t.Fatal("expected an unsupported dataType error")
 		}
 	})
+
+	t.Run("rounds to default 2 decimals when outputDecimals unset", func(t *testing.T) {
+		def := config.RegisterDef{RegisterAddress: 100, ModbusSize: 1, ScaleFactor: 0.001, DataType: "uint16"}
+		got, err := Decode(block, 100, def) // 1234 * 0.001 = 1.234 -> 1.23
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != 1.23 {
+			t.Errorf("got %v, want 1.23", got)
+		}
+	})
+
+	t.Run("outputDecimals overrides the default", func(t *testing.T) {
+		three := 3
+		def := config.RegisterDef{RegisterAddress: 100, ModbusSize: 1, ScaleFactor: 0.001, DataType: "uint16", OutputDecimals: &three}
+		got, err := Decode(block, 100, def) // 1234 * 0.001 = 1.234, kept at 3 decimals
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != 1.234 {
+			t.Errorf("got %v, want 1.234", got)
+		}
+	})
+
+	t.Run("outputDecimals of 0 rounds to a whole number", func(t *testing.T) {
+		zero := 0
+		def := config.RegisterDef{RegisterAddress: 100, ModbusSize: 1, ScaleFactor: 0.001, DataType: "uint16", OutputDecimals: &zero}
+		got, err := Decode(block, 100, def) // 1234 * 0.001 = 1.234 -> 1
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != 1 {
+			t.Errorf("got %v, want 1", got)
+		}
+	})
 }

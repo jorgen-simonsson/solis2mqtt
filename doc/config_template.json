@@ -43,7 +43,8 @@
                             "modbusSize": 2,
                             "scaleFactor": 0.1,
                             "dataType": "float32",
-                            "outputProperty": "voltageL1"
+                            "outputProperty": "voltageL1",
+                            "outputDecimals": 3
                         },
                         {
                             "registerAddress": 3458,
