@@ -41,7 +41,7 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.1,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "voltage.L1"
                         },
                         {
@@ -49,7 +49,7 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.01,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "current.L1"
                         },
                         {
@@ -57,7 +57,7 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.1,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "voltage.L2"
                         },
                         {
@@ -65,7 +65,7 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.01,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "current.L2"
                         },
                         {
@@ -73,7 +73,7 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.1,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "voltage.L3"
                         },
                         {
@@ -81,40 +81,8 @@
                             "modbusReadCommand": 4,
                             "modbusSize": 1,
                             "scaleFactor": 0.01,
-                            "dataType": "uint16",
+                            "dataType": "uint32",
                             "outputProperty": "current.L3"
-                        },
-                        {
-                            "registerAddress": 33257,
-                            "modbusReadCommand": 4,
-                            "modbusSize": 2,
-                            "scaleFactor": 1,
-                            "dataType": "int32",
-                            "outputProperty": "power.L1"
-                        },
-                        {
-                            "registerAddress": 33259,
-                            "modbusReadCommand": 4,
-                            "modbusSize": 2,
-                            "scaleFactor": 1,
-                            "dataType": "int32",
-                            "outputProperty": "power.L2"
-                        },
-                        {
-                            "registerAddress": 33261,
-                            "modbusReadCommand": 4,
-                            "modbusSize": 2,
-                            "scaleFactor": 1,
-                            "dataType": "int32",
-                            "outputProperty": "power.L3"
-                        },
-                        {
-                            "registerAddress": 33263,
-                            "modbusReadCommand": 4,
-                            "modbusSize": 2,
-                            "scaleFactor": 1,
-                            "dataType": "int32",
-                            "outputProperty": "power.total"
                         }
                     ]
                }
