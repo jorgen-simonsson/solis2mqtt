@@ -23,7 +23,7 @@
             "deviceId": "SOLIS",
             "deviceAddress": 1,
             "tableId": "Solis_Registers",
-            "mqttTopic": "modbus/solis"
+            "mqttTopic": "solis/modbus"
         }
     ],
     "registerTables":
@@ -117,7 +117,64 @@
                             "outputProperty": "power.total"
                         }
                     ]
-               }
+                },
+                {
+                    "clusterName": "Meter_type",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 43140,
+                            "modbusReadCommand": 3,
+                            "modbusSize": 1,
+                            "scaleFactor": 1,
+                            "dataType": "int16",
+                            "outputProperty": "meter.type"
+                        }
+                    ]
+                },
+                {
+                    "clusterName": "Solis_Battery_SOC",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 33139,
+                            "modbusReadCommand": 4,
+                            "modbusSize": 1,
+                            "scaleFactor": 1,
+                            "dataType": "uint16",
+                            "outputProperty": "battery.SOC"
+                        }
+                    ]
+                },
+                {
+                    "clusterName": "Solis_battery_power",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 34605,
+                            "modbusReadCommand": 4,
+                            "modbusSize": 2,
+                            "scaleFactor": 1,
+                            "dataType": "int32",
+                            "outputProperty": "battery.power"
+                        }
+                    ]
+                },
+                {
+                    "clusterName": "Solis_PW_power",
+                    "registers":
+                    [
+                        {
+                            "registerAddress": 34621,
+                            "modbusReadCommand": 4,
+                            "modbusSize": 2,
+                            "scaleFactor": 1,
+                            "dataType": "int32",
+                            "outputProperty": "solar.power"
+                        }
+                    ]
+                }
+
             ]
         }
     ]
